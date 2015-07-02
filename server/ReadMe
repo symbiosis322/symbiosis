@@ -1,0 +1,6 @@
+ReadMe
+
+
+Server connected to Bee:
+	1) Iptables
+		iptables -t nat -A PREROUTING ! -s <BYPASS IP> ! -d <SERVER IP> -p tcp -j DNAT --to <SERVER IP>:27003

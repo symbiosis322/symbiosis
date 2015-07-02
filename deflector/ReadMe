@@ -1,0 +1,15 @@
+ReadMe
+
+
+1) Iptables
+	iptables -A OUTPUT -p tcp --sport 27004 -j DROP
+
+2) Edit BYPASS_ADDR in common.h
+	#define BYPASS_ADDR <BYPASS_IP>
+
+	<BYPASS_IP> : bypasss ip address
+
+	ex) #define BYPASS_ADDR "10.56.44.5"
+
+3) Makefile
+	make deflector

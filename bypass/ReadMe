@@ -1,0 +1,10 @@
+ReadMe
+
+
+1) Ip route
+	ip route add unicast <SUBNET MASK> via <Server connected to Bee ip>
+
+	ex) ip route add unicast 10.56.44.0/24 via 10.56.44.4
+
+2) Makefile
+	make bypass

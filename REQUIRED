@@ -1,0 +1,15 @@
+Symbiosis Bee:
+	python3-crypto
+
+Symbiosis Flower:
+	python3-crypto
+	
+Symbiosis Deflector:
+	
+Symbiosis Bypass:
+	
+Symbiosis Server:
+	squid(proxy)
+	python3-crypto
+
+"Bypass" and "Server connected to Bee" must be in same network.

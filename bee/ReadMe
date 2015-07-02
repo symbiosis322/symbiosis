@@ -1,0 +1,10 @@
+ReadMe
+
+
+1) Edit MAIN(line. 216) in symbiosis_bee.py
+	bee.fly(<SYMBIOSIS FLOWER IP>, SYMBIOSIS_FLOWER_PORT, <SYMBIOSIS DEFLECTOR IP>, SYMBIOSIS_DEFLECTOR_PORT)
+
+	<SYMBIOSIS FLOWER IP> : Symbiosis flower ip address
+	<SYMBIOSIS DEFLECTOR IP> : Symbiosis deflector ip address
+
+	ex) bee.fly('10.56.44.2', SYMBIOSIS_FLOWER_PORT, '10.56.44.4', SYMBIOSIS_DEFLECTOR_PORT)

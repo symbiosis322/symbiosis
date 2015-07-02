@@ -1,0 +1,11 @@
+ReadMe
+
+1) Export Command
+	export http_proxy=http://localhost:27001
+
+2) Edit MAIN(line. 221) in symbiosis_flower.py
+	flower.bloom(<SYMBIOSIS SERVER IP>, SYMBIOSIS_SERVER_PORT)
+
+	<SYMIOSIS SERVER IP> : server's ip address connected to flower directly.
+
+	ex) flower.bloom('10.56.44.3', SYMBIOSIS_PORT)

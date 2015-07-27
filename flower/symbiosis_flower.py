@@ -12,7 +12,12 @@ import socket
 import select
 import hashlib
 
+from Crypto.Hash import SHA256
 from Crypto.Cipher import AES
+from Crypto.Util.asn1 import DerSequence
+from Crypto.PublicKey import RSA
+
+from binascii import a2b_base64
 
 from diffie_hellman import DiffieHellman
 
@@ -237,7 +242,8 @@ if __name__ == '__main__':
 
     # (!) Symbiosis Server Host IP
 
-    # flower.bloom('fserver.Symbiosis.CAT.emulab.net', SYMBIOSIS_SERVER_PORT)
+    # flower.bloom('127.0.0.1', SYMBIOSIS_SERVER_PORT)
+    flower.bloom('fserver.Symbiosis.CAT.emulab.net', SYMBIOSIS_SERVER_PORT)
 
     # usage: flower.bloom( <SYMBIOSIS_SERVER_IP>, SYMBIOSIS_SERVER_PORT)
     # <SYMIOSIS_SERVER_IP> : server's ip address connected to flower directly.

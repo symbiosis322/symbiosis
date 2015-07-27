@@ -10,6 +10,7 @@ Created on 2015. 1. 21.
 import socket
 import select
 
+from Crypto.Hash import SHA256
 
 
 
@@ -99,7 +100,7 @@ class Stream:
         self.streams[index] = conn
         
     
-    def select(self, dest, cell_type, aes):
+    def select(self, dest, cell_type, aes, hash_key):
         DEBUG_POSITION = 'Symbiosis:Stream:Select:'
         
         if len(self.streams) == 0: return
@@ -116,7 +117,7 @@ class Stream:
             for i in read:
                 data = b''
                 try:
-                    data = i.recv(987)
+                    data = i.recv(976)
                 except socket.error as e:
                     if DEBUG: print(DEBUG_POSITION, '소켓이 닫혀있습니다.')
                     self.streams[self.getID(i)].close()
@@ -127,7 +128,20 @@ class Stream:
                 
                 try:
                     print('BROWSER REQ > FLOWER > BEE:', len(data))
-                    dest.send(encodeCell(cell_type, len(data), self.getID(i), bytes(32), aes.encrypt(data)))
+
+                    # Digest
+                    digest = SHA256.new(data + hash_key).digest()
+
+                    # Encrypt
+                    encrypted = b''
+                    while len(data) >= 16:
+                        len(data[:16])
+                        encrypted = encrypted + aes.encrypt(data[:16])
+                        data = data[16:]
+                    encrypted = encrypted + data
+
+                    # Send Cell
+                    dest.send(encodeCell(cell_type, len(encrypted), self.getID(i), digest, encrypted))
                 except socket.error as e:
                     if DEBUG: print(DEBUG_POSITION, '예기치 못한 에러:', e)
                     continue    
@@ -158,7 +172,9 @@ class Stream:
 
 # Encode Cell
 def encodeCell(cell_type, length, streamID, digest, data):
-    return bytes([cell_type, int(length / 256), length % 256, int(streamID / 256), streamID % 256]) + digest + data + bytes(987 - len(data))
+    pad = b''
+    if len(data) < 987: pad = bytes(987 - len(data))
+    return bytes([cell_type, int(length / 256), length % 256, int(streamID / 256), streamID % 256]) + digest + data + pad
 
 # Decode Cell
 def decodeCell(data):

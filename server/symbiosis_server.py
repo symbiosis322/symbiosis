@@ -8,17 +8,23 @@ Created on 2015. 1. 25.
 
 # Import
 import _thread
-import select
 import socket
+import select
 import hashlib
+
+from Crypto.Hash import SHA256
+from Crypto.Cipher import AES
+from Crypto.Util.asn1 import DerSequence
+from Crypto.PublicKey import RSA
+
+from binascii import a2b_base64
+
+from diffie_hellman import DiffieHellman
 
 from symbiosis import SYMBIOSIS_MODE, decodeCell, Stream, SYMBIOSIS_SERVER_PORT,\
     TIMEOUT, printCell, SYMBIOSIS_CELL_TYPE_RESPONSE,\
     SYMBIOSIS_CELL_TYPE_REQUEST, SYMBIOSIS_CELL_TYPE_KEY_REQUEST, encodeCell,\
     SYMBIOSIS_CELL_TYPE_KEY_RESPONSE
-
-from diffie_hellman import DiffieHellman
-
 
 
 
@@ -80,6 +86,10 @@ class Server:
         
         data_proxy = b''
 
+        keys = []
+
+        aes_recv = None
+
         timeout = TIMEOUT
         while self.running:
             (read, _, exception) = select.select([flower], [], [flower], timeout)
@@ -101,6 +111,18 @@ class Server:
                             cell = decodeCell(raw_cell)
 
                             if cell['type'] == SYMBIOSIS_CELL_TYPE_REQUEST:
+                                # Decrypt
+                                data = cell['data']
+                                decrypted = b''
+                                while len(data) >= 16:
+                                    decrypted = decrypted + aes_recv.decrypt(data[:16])
+                                    data = data[16:]
+                                decrypted = decrypted + data
+
+                                # Digest
+                                digest = SHA256.new(decrypted + keys[0]).digest()
+                                if digest != cell['digest']: continue
+
                                 # Connect to Squid with streamID
                                 if not cell['streamID'] in self.stream.streams.keys():
                                     if self.stream.connect('localhost', 3128, cell['streamID']) == False:
@@ -108,26 +130,61 @@ class Server:
                                         continue
                                     
                                 # Send Data
-                                self.stream.send(cell['streamID'], cell['data'])
+                                self.stream.send(cell['streamID'], decrypted)
                             elif cell['type'] == SYMBIOSIS_CELL_TYPE_KEY_REQUEST:
-                                print("KEY REQUEST!!!!")
+
+                                print("Key Exchange: Start")
+
+                                # g_x
                                 g_x = cell['data']
                                 
+
                                 # g_y
-                                g_y = dh.publicKey
+                                g_y = dh.publicKey.to_bytes((dh.publicKey.bit_length() + 7) // 8, 'big')
                                 
+
                                 # H(K)
                                 dh.genKey(int.from_bytes(g_x, byteorder='big'))
                                 
-                                aes = AES.new(dh.getKey(), AES.MODE_ECB)
-                                self.exchange = True
+                                K = dh.getKey()
+
+                                # h_k = SHA256.new(K.decode('utf-8')).digest()
 
                                 h = hashlib.sha256()
-                                h.update(str(dh.getKey()).encode(encoding='utf_8', errors='strict'))
+                                h.update(str(K).encode(encoding='utf_8', errors='strict'))
                                 h_k = h.digest()
                                 
-                                data = dh.publicKey.to_bytes((dh.publicKey.bit_length() + 7) // 8, 'big') + h_k
-                                flower.send(encodeCell(SYMBIOSIS_CELL_TYPE_KEY_RESPONSE, len(data), 0, bytes(32), data))
+
+                                # certificate
+                                crt = open("./ss.crt").read().encode()
+
+
+                                # sig = sign(SHA256(g_y))
+                                prk = RSA.importKey(open('private.key','r').read())
+
+                                hash = SHA256.new(g_y).digest()
+                                n = int(prk.sign(hash, '')[0])
+                                sig = n.to_bytes((n.bit_length() + 7) // 8, 'big')
+
+
+                                # Keys
+                                for i in range(4):
+                                    keys = keys + [ str(i).encode() + K[1:] ]
+
+                                aes_recv = AES.new(keys[1], AES.MODE_ECB)
+                                aes_send = AES.new(keys[3], AES.MODE_ECB)
+
+                                # crt:1099, g_y:512, sig:256, h_k:32
+                                data = crt + g_y + sig + h_k
+                                while len(data) > 0:
+                                    if len(data) <= 987: end = 1
+                                    else: end = 0
+                                    flower.send(encodeCell(SYMBIOSIS_CELL_TYPE_KEY_RESPONSE, len(data[:987]), end, bytes(32), data[:987]))
+                                    data = data[987:]
+                                
+                                self.exchange = True
+                                
+                                print('Key Exchange: End')
 
                     except socket.error as e:
                             if DEBUG: print(DEBUG_POSITION, '알 수 없는 오류가 발생했습니다:')
@@ -135,7 +192,7 @@ class Server:
                             return
             
             if self.exchange == True:
-                self.stream.select(flower, SYMBIOSIS_CELL_TYPE_RESPONSE, aes)
+                self.stream.select(flower, SYMBIOSIS_CELL_TYPE_RESPONSE, aes_send, keys[2])
 
 
 
